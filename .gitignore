@@ -1,0 +1,8 @@
+builds/
+*.pid
+.DS_Store
+bench/logs/
+*.pyc
+__pycache__/
+.pytest_cache/
+*.egg-info/
