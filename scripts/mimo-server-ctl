@@ -1,0 +1,102 @@
+#!/bin/zsh
+# Start/stop the MiMo-V2.6-Flash SSD-streaming server (engine/server.py) on :8082.
+#   mimo-server-ctl start    start it (takes the GPU lock; ~15-20 s to load + warm 78 GB of experts)
+#   mimo-server-ctl stop     stop it and free the GPU lock
+#   mimo-server-ctl status   health + last-request stats
+# Env: MIMO_SLOTS (resident experts per layer, default 125 = 49%), MIMO_PORT (8082),
+#      MIMO_MODEL_DIR (converted weights, required), MIMO_VENV (a venv to run from) or PYTHON,
+#      MIMO_GPU_LOCK (default /tmp/mimo-gpu.lock).
+# Refuses to start if the GPU lock is held, so only one big model is in memory at a time.
+setopt no_unset
+
+port=${MIMO_PORT:-8082}
+# GPU lock ensuring one big model in memory at a time; other launchers can share it.
+lock=${MIMO_GPU_LOCK:-/tmp/mimo-gpu.lock}
+state=~/.local/state/mimo-server
+pidfile=$state/server.pid
+log=$state/server.log
+tag="mimo-server-ctl"
+here=${0:A:h}
+repo=${here:h}
+# Needs the requirements.txt deps (MLX 0.32.2, mlx-lm); prefer that venv over PATH python3.
+if [[ -n ${PYTHON:-} ]]; then py=$PYTHON
+elif [[ -n ${MIMO_VENV:-} ]]; then py=$MIMO_VENV/bin/python
+else py=python3
+fi
+
+healthy() { curl -sf -m 2 http://127.0.0.1:$port/health >/dev/null }
+
+our_pid() {
+  [[ -r $pidfile ]] || return 1
+  local pid=$(<$pidfile)
+  kill -0 $pid 2>/dev/null && ps -p $pid -o args= 2>/dev/null | grep -q "engine.server" && print $pid
+}
+
+conflicts() {
+  [[ -d $lock ]] || return 0
+  local owner=$(cat $lock/owner 2>/dev/null)
+  if [[ $owner == "$tag"* ]] && ! our_pid >/dev/null; then
+    rm -rf $lock   # our own stale lock
+    return 0
+  fi
+  print -u2 "GPU lock $lock is held by: ${owner:-unknown}"
+  return 1
+}
+
+start() {
+  healthy && { print -u2 "MiMo server already up on :$port"; return 0 }
+  [[ -n ${MIMO_MODEL_DIR:-} ]] || { print -u2 "Set MIMO_MODEL_DIR to the converted model directory."; return 1 }
+  if lsof -nP -iTCP:$port -sTCP:LISTEN >/dev/null 2>&1; then
+    print -u2 "Something else is listening on :$port"; return 1
+  fi
+  conflicts || { print -u2 "Not starting (one big model at a time)."; return 1 }
+  mkdir $lock 2>/dev/null || { print -u2 "GPU lock taken by: $(cat $lock/owner 2>/dev/null)"; return 1 }
+  mkdir -p $state
+  print -u2 "Starting MiMo server on :$port (slots ${MIMO_SLOTS:-125}/256), log: $log"
+  cd $repo
+  perl -MPOSIX -e 'POSIX::setsid(); exec @ARGV or die $!' \
+    $py -u -m engine.server --port $port --slots ${MIMO_SLOTS:-125} </dev/null >>$log 2>&1 &
+  local pid=$!
+  print $pid >$pidfile
+  print "$tag pid $pid $(date)" >$lock/owner
+  local i
+  for i in {1..240}; do
+    healthy && { print -u2 "MiMo server ready (${i}s)"; return 0 }
+    if ! kill -0 $pid 2>/dev/null; then
+      print -u2 "Server exited during startup; last log lines:"; tail -n 20 $log >&2
+      rm -f $pidfile; rm -rf $lock; return 1
+    fi
+    sleep 1
+  done
+  print -u2 "Not healthy after 240 s (pid $pid); see $log"; return 1
+}
+
+stop() {
+  local pid
+  if pid=$(our_pid); then
+    print -u2 "Stopping MiMo server (pid $pid)"
+    kill $pid
+    local i
+    for i in {1..30}; do kill -0 $pid 2>/dev/null || break; sleep 1; done
+    kill -0 $pid 2>/dev/null && kill -9 $pid
+  fi
+  rm -f $pidfile
+  [[ $(cat $lock/owner 2>/dev/null) == "$tag"* ]] && rm -rf $lock
+  return 0
+}
+
+status() {
+  if healthy; then
+    print "MiMo server up on :$port"
+    curl -s -m 2 http://127.0.0.1:$port/stats; print
+  else
+    print "MiMo server not running on :$port"
+  fi
+  [[ -d $lock ]] && print "GPU lock: $(cat $lock/owner 2>/dev/null)"
+  return 0
+}
+
+case ${1:-} in
+  start|stop|status) $1 ;;
+  *) print -u2 "usage: ${0:t} start|stop|status"; exit 2 ;;
+esac
