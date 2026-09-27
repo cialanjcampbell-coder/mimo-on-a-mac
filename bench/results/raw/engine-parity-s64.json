@@ -1,0 +1,15 @@
+{
+ "slots": 64,
+ "ppl": 2.781332015991211,
+ "top1": 0.7738492488861084,
+ "prefill_tok_s": 131.9943240889805,
+ "decode_vs_prefill_argmax_agree": 0.875,
+ "decode_vs_prefill_max_rel": 0.0746268630027771,
+ "gen_prefill_s": 4.274533033370972,
+ "gen_prefill_tok_s": 7.48619784902311,
+ "gen_decode_s": 9.993260860443115,
+ "gen_decode_tok_s": 4.803236968425501,
+ "gen_misses_per_token": 110.3125,
+ "gen_io_GB": 110.9655552,
+ "gen_io_s": 8.806062103013119
+}
