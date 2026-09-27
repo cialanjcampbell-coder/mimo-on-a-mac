@@ -1,0 +1,4 @@
+name,qty,unit_price,location
+widget,4,1.10,bin-a
+gadget,1,0.99,bin-b
+widget-xl,2,10.00,bin-a

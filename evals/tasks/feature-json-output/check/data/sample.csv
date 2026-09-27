@@ -1,0 +1,6 @@
+name,qty,unit_price,location
+bolts,120,0.05,shed
+drill,1,89.99,garage
+nails,500,0.02,shed
+saw,2,15.50,garage
+tape,3,2.25,office

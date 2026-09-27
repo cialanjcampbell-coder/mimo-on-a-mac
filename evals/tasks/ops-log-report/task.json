@@ -1,0 +1,7 @@
+{
+  "title": "Access-log report script",
+  "category": "scripting/ops",
+  "prompt": "Write report.py so that `python3 report.py LOGDIR` reads every file in LOGDIR whose name starts with \"access.log\" (names ending in .gz are gzip-compressed) and prints exactly:\n\ntop paths:\n  <hits> <path>\n  ... (the 5 most-requested paths, most hits first; ties broken alphabetically by path; fewer lines if there are fewer paths)\nstatus classes:\n  2xx <count>\n  3xx <count>\n  4xx <count>\n  5xx <count>\nmalformed: <count>\n\nLines use the Common Log Format, e.g.\n127.0.0.1 - - [10/Oct/2026:13:55:36 +0000] \"GET /index.html?x=1 HTTP/1.1\" 200 2326\nThe path is the request target without its query string (/index.html above); the size field may be '-'. A line that doesn't match this format (including a request that isn't METHOD TARGET PROTOCOL, or a status that isn't 3 digits in 200-599) is malformed: count it and otherwise ignore it. Blank lines are ignored entirely. Always print all four status classes, even when 0. Use only the Python standard library. Sample logs are in logs/.",
+  "tools": "read,edit,write,grep,find,ls,bash",
+  "protected": []
+}

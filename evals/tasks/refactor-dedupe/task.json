@@ -1,0 +1,7 @@
+{
+  "title": "Extract the duplicated record parser",
+  "category": "refactor",
+  "prompt": "importers/csv_import.py and importers/tsv_import.py each carry their own copy of the record validation logic. Extract it into a new module importers/records.py exposing parse_record(fields, lineno), use it from both importers, and remove the duplicated private functions. Behaviour, including every error message, must stay exactly the same, and the existing tests in tests/ must keep passing without changes.",
+  "tools": "read,edit,write,grep,find,ls",
+  "protected": ["tests/test_importers.py"]
+}

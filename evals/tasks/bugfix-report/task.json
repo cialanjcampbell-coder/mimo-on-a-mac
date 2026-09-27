@@ -1,0 +1,7 @@
+{
+  "title": "Monthly report misses the last day of the month",
+  "category": "bug fix",
+  "prompt": "A user reports: \"The monthly expense report is wrong. In January I logged a £40.00 grocery shop on the 31st and it doesn't appear in the January totals at all. Other days seem fine.\"\n\nFind the root cause in this repo and fix it properly (not just for January). Keep the public API unchanged. Briefly explain what was wrong.",
+  "tools": "read,edit,write,grep,find,ls",
+  "protected": []
+}

@@ -1,0 +1,7 @@
+{
+  "title": "Add --format json to the inventory CLI",
+  "category": "multi-file feature",
+  "prompt": "Add a --format option to the inventory CLI (python3 -m inventory FILE.csv): --format text (the default; output must stay exactly as it is now) or --format json. The JSON output must be one object printed to stdout with exactly this shape:\n\n{\"items\": 5, \"total_qty\": 626, \"total_value\": \"143.74\", \"locations\": [{\"name\": \"garage\", \"items\": 2, \"qty\": 3, \"value\": \"120.99\"}, ...]}\n\nMoney values are strings in pounds with two decimals; locations are sorted by name. Put the JSON rendering in inventory/formatting.py next to the text rendering, wire the flag in inventory/cli.py, and document the flag in README.md.",
+  "tools": "read,edit,write,grep,find,ls",
+  "protected": []
+}

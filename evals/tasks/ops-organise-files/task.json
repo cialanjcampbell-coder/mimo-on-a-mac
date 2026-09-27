@@ -1,0 +1,7 @@
+{
+  "title": "File organiser with --dry-run",
+  "category": "scripting/ops",
+  "prompt": "Write organise.py so that `python3 organise.py [--dry-run] SRC DEST` sorts the files in SRC into DEST by the date in their file name:\n- Recognised date forms: YYYYMMDD, YYYY-MM-DD, YYYY.MM.DD and YYYY_MM_DD (the same separator throughout), not part of a longer run of digits. The first recognised date that is a real calendar date with a year from 1990 to 2099 wins; if there is none, the file is undated.\n- A dated file moves to DEST/YYYY/MM/<same name>; an undated file moves to DEST/unsorted/<same name>.\n- Never overwrite: if the target exists, use name-1.ext, name-2.ext, ... (the first free one).\n- Only regular files directly inside SRC; skip subdirectories and names starting with '.'.\n- Print one line per file, in name order: \"move SRC_PATH -> DEST_PATH\". With --dry-run, print the same lines but change nothing on disk.\n- Running it again when SRC has nothing left to move changes nothing.\nSample files are in inbox/. Use only the Python standard library.",
+  "tools": "read,edit,write,grep,find,ls,bash",
+  "protected": []
+}

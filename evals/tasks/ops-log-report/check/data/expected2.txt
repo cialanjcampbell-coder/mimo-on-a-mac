@@ -1,0 +1,12 @@
+top paths:
+  196 /
+  136 /api/items
+  83 /static/site.css
+  76 /static/app.js
+  56 /api/items/42
+status classes:
+  2xx 503
+  3xx 77
+  4xx 111
+  5xx 48
+malformed: 11

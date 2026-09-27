@@ -1,0 +1,7 @@
+{
+  "title": "Make the failing template tests pass",
+  "category": "debug",
+  "prompt": "The test suite in tests/ is failing (run it with: python3 -m unittest -v). Make all the tests pass by fixing the library code in tmpl/. Do not modify anything under tests/. Explain each bug you found and why it caused the failures.",
+  "tools": "read,edit,write,grep,find,ls",
+  "protected": ["tests/test_render.py", "tests/__init__.py"]
+}
