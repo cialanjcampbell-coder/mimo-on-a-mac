@@ -1,0 +1,146 @@
+#!/usr/bin/env python3
+"""Record a trial: macmon power/thermal samples + server request lines -> report.
+
+  trial-record start [LABEL]    begin sampling (one trial at a time)
+  trial-record status           show the active trial
+  trial-record stop [--save]    stop and print the report; --save copies it to bench/results/
+Reports live in ~/.local/state/trials/<time>-<label>/.
+"""
+import argparse
+import json
+import os
+import shutil
+import signal
+import subprocess
+import sys
+import time
+from datetime import datetime
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import triallib as tl  # noqa: E402
+
+REPO = Path(__file__).resolve().parents[1]
+STATE = Path(os.environ.get("TRIAL_STATE_DIR", Path.home() / ".local/state/trials"))
+MACMON = os.environ.get("TRIAL_MACMON_BIN", "macmon")
+RESULTS = Path(os.environ.get("TRIAL_RESULTS_DIR", REPO / "bench" / "results"))
+INTERVAL_MS = 1000
+
+
+def logs():
+    return {"mimo": Path(os.environ.get("TRIAL_MIMO_LOG", tl.SERVER_LOGS["mimo"])),
+            "mlxserve": Path(os.environ.get("TRIAL_MLXSERVE_LOG", tl.SERVER_LOGS["mlxserve"]))}
+
+
+def alive(pid):
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    return True
+
+
+def current():
+    f = STATE / "current"
+    if not f.exists():
+        return None
+    d = Path(f.read_text().strip())
+    return d if (d / "meta.json").exists() else None
+
+
+def cmd_start(args):
+    if current():
+        sys.exit(f"a trial is already active: {current().name} (run: trial-record stop)")
+    label = "".join(c if c.isalnum() or c in "-_." else "-" for c in (args.label or "trial"))
+    now = datetime.now()
+    d = STATE / f"{now:%Y%m%d-%H%M%S}-{label}"
+    d.mkdir(parents=True)
+    with open(d / "macmon.jsonl", "wb") as out:
+        try:
+            proc = subprocess.Popen([MACMON, "pipe", "-i", str(INTERVAL_MS)], stdout=out,
+                                    stderr=subprocess.DEVNULL, stdin=subprocess.DEVNULL,
+                                    start_new_session=True)
+        except FileNotFoundError:
+            shutil.rmtree(d)
+            sys.exit(f"macmon not found ({MACMON}); install it with: brew install macmon")
+    meta = {"label": label, "start": now.isoformat(timespec="seconds"), "macmon_pid": proc.pid,
+            "interval_s": INTERVAL_MS / 1000,
+            "offsets": {k: tl.log_size(p) for k, p in logs().items()}}
+    (d / "meta.json").write_text(json.dumps(meta, indent=1))
+    (STATE / "current").write_text(str(d))
+    print(f"trial started: {d}")
+
+
+def cmd_status(args):
+    d = current()
+    if not d:
+        print("no active trial")
+        return
+    meta = json.loads((d / "meta.json").read_text())
+    elapsed = (datetime.now() - datetime.fromisoformat(meta["start"])).total_seconds()
+    n = sum(1 for _ in open(d / "macmon.jsonl", "rb"))
+    reqs = sum(len(tl.parse_log_text(tl.read_since(p, meta["offsets"].get(k, 0)))[0])
+               for k, p in logs().items())
+    state = "running" if alive(meta["macmon_pid"]) else "EXITED"
+    print(f"{d.name}: {elapsed:.0f} s, {n} macmon samples (macmon {state}), {reqs} requests")
+
+
+def save_path(meta):
+    base = f"{meta['start'][:10]}-trial-{meta['label']}"
+    dest, i = RESULTS / f"{base}.md", 2
+    while dest.exists():
+        dest, i = RESULTS / f"{base}-{i}.md", i + 1
+    return dest
+
+
+def cmd_stop(args):
+    d = current()
+    if not d:
+        sys.exit("no active trial")
+    meta = json.loads((d / "meta.json").read_text())
+    pid = meta["macmon_pid"]
+    early = not alive(pid)
+    if not early:
+        os.kill(pid, signal.SIGTERM)
+        for _ in range(50):
+            if not alive(pid):
+                break
+            time.sleep(0.1)
+    end = datetime.now().isoformat(timespec="seconds")
+    reqs, skipped = [], 0
+    for name, path in logs().items():
+        r, s = tl.parse_log_text(tl.read_since(path, meta["offsets"].get(name, 0)))
+        reqs += r
+        skipped += s
+    summary = tl.build_summary(meta, end, reqs, skipped, tl.load_samples(d / "macmon.jsonl"), early)
+    (d / "summary.json").write_text(json.dumps(summary, indent=1))
+    report = tl.render_report(summary)
+    (d / "report.md").write_text(report)
+    (STATE / "current").unlink()
+    print(report)
+    print(f"saved: {d / 'report.md'}")
+    if args.save:
+        dest = save_path(meta)
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy(d / "report.md", dest)
+        print(f"copied to {dest}")
+
+
+def main():
+    p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    sub = p.add_subparsers(dest="cmd", required=True)
+    s = sub.add_parser("start")
+    s.add_argument("label", nargs="?")
+    s.set_defaults(fn=cmd_start)
+    sub.add_parser("status").set_defaults(fn=cmd_status)
+    s = sub.add_parser("stop")
+    s.add_argument("--save", action="store_true", help="also copy the report to bench/results/")
+    s.set_defaults(fn=cmd_stop)
+    args = p.parse_args()
+    args.fn(args)
+
+
+if __name__ == "__main__":
+    main()
