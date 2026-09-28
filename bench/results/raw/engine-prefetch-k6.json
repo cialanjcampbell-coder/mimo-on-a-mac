@@ -1,0 +1,22 @@
+{
+ "slots": 64,
+ "slots_total": 6174,
+ "dense_bits": 8,
+ "prefetch_k": 6,
+ "decay_every": 32,
+ "ppl": 2.770874261856079,
+ "top1": 0.7705137133598328,
+ "prefill_tok_s": 219.0513968884979,
+ "decode_vs_prefill_argmax_agree": 0.9166666865348816,
+ "decode_vs_prefill_max_rel": 0.12817029654979706,
+ "gen_prefill_s": 2.2714388370513916,
+ "gen_prefill_tok_s": 14.087986644421363,
+ "gen_decode_s": 4.460248947143555,
+ "gen_decode_tok_s": 10.761731142998261,
+ "gen_misses_per_token": 28.416666666666668,
+ "gen_io_GB": 65.817280512,
+ "gen_io_s": 4.272016050990715,
+ "tf_tok_s": 12.520071754695442,
+ "tf_misses_per_token": 22.2109375,
+ "tf_MB_per_token": 703.248384
+}
