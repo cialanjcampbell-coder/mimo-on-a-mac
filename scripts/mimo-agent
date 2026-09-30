@@ -1,0 +1,14 @@
+#!/bin/sh
+# Run the small MiMo coding agent (agent/) in the current directory; starts the server if needed.
+#   mimo-agent                    interactive
+#   mimo-agent -p "task" [--json] [--tools read,edit,...] [--thinking off] ...   (mimo-agent -h)
+# Stdlib only, so any python3 >= 3.10 works; set MIMO_AGENT_PYTHON to pick one.
+# The repo is put first on sys.path explicitly (not via PYTHONPATH + -m) so that neither the caller's cwd
+# nor the agent's shell commands see it (a cwd with its own agent/ package would otherwise shadow ours).
+self=$0
+while [ -L "$self" ]; do
+  link=$(readlink "$self")
+  case $link in /*) self=$link ;; *) self=$(dirname "$self")/$link ;; esac
+done
+repo=$(cd "$(dirname "$self")/.." && pwd -P)
+exec "${MIMO_AGENT_PYTHON:-python3}" -c 'import runpy, sys; sys.path.insert(0, sys.argv.pop(1)); runpy.run_module("agent", run_name="__main__", alter_sys=True)' "$repo" "$@"
