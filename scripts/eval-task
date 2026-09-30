@@ -1,0 +1,115 @@
+#!/usr/bin/env python3
+"""Eval task pack.
+
+  eval-task list                       tasks in evals/tasks/
+  eval-task setup NAME [--tag TAG]     fresh scratch work dir + prompt + launch lines
+  eval-task check DIR [-v]             run the hidden checks (exit 0 only on PASS)
+  eval-task transcript DIR             a headless run's transcript as Markdown
+  eval-task run NAME|all [--repeats N] [--thinking on|off] [--save]
+                                       mimo-agent headless against the running server, then check
+  eval-task blind RUN... --out DIR / unblind DIR   anonymise runs for blind scoring, then join scores back
+"""
+import argparse
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from evalkit import blind, runner, tasks, transcript  # noqa: E402
+
+
+def cmd_list(a):
+    for t in tasks.list_tasks():
+        print(f"{t.name:22} {t.category:16} {t.title}")
+
+
+def cmd_setup(a):
+    d = tasks.setup(a.name, a.tag)
+    t = tasks.load_task(a.name)
+    print(f"work dir: {d}\n\nprompt (paste into the agent):\n\n{t.prompt}\n")
+    print(f"launch:    cd '{d}' && {tasks.REPO}/scripts/mimo-agent --tools {t.tools}")
+    print(f"\nwhen done: {tasks.REPO}/scripts/eval-task check '{d}'")
+
+
+def cmd_check(a):
+    r = tasks.check(a.dir, a.timeout)
+    if a.verbose or not r.passed:
+        print(r.output)
+    print(r.diff_stat)
+    print(r.summary())
+    sys.exit(0 if r.passed else 1)
+
+
+def cmd_transcript(a):
+    events = transcript.load_events(Path(a.dir) / ".eval-transcript.jsonl")
+    if not events:
+        sys.exit(f"no transcript in {a.dir} (only runs made with `eval-task run` have one)")
+    print(transcript.render_markdown(events))
+    s = transcript.stats(events)
+    print(f"\n---\n{s['turns']} turns, {s['tool_calls']} tool calls ({s['tool_errors']} errors), "
+          f"{s['output_tokens']} output tokens, stop: {s['stop_reason']}")
+
+
+def cmd_run(a):
+    names = [t.name for t in tasks.list_tasks()] if a.name == "all" else [a.name]
+    try:
+        records = runner.run(names, a.repeats, a.thinking, a.allow_bash, a.timeout)
+    except RuntimeError as e:
+        sys.exit(str(e))
+    print()
+    print(runner.summarize_runs(records))
+    if a.save:
+        jl, md = runner.save_results(records, tasks.REPO / "bench" / "results")
+        print(f"saved {jl} and {md}")
+
+
+def cmd_blind(a):
+    blind.make_blind(a.runs, a.out, a.seed)
+    print(f"review folder: {a.out}\nkey (don't share with the reviewer): {blind.key_path(a.out)}")
+
+
+def cmd_unblind(a):
+    print(blind.unblind(a.out))
+
+
+def build_parser():
+    p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    sub = p.add_subparsers(dest="cmd", required=True)
+    sub.add_parser("list").set_defaults(fn=cmd_list)
+    s = sub.add_parser("setup")
+    s.add_argument("name")
+    s.add_argument("--tag", default="manual")
+    s.set_defaults(fn=cmd_setup)
+    s = sub.add_parser("check")
+    s.add_argument("dir")
+    s.add_argument("--timeout", type=int, default=120)
+    s.add_argument("-v", "--verbose", action="store_true")
+    s.set_defaults(fn=cmd_check)
+    s = sub.add_parser("transcript", help="render a run's transcript as Markdown")
+    s.add_argument("dir")
+    s.set_defaults(fn=cmd_transcript)
+    s = sub.add_parser("run", help="run mimo-agent headless on a task N times against a running server, then check")
+    s.add_argument("name", help="task name or 'all'")
+    s.add_argument("--repeats", type=int, default=3)
+    s.add_argument("--timeout", type=int, default=900, help="seconds per run (default 900)")
+    s.add_argument("--thinking", choices=["on", "off"], default="on")
+    s.add_argument("--allow-bash", action="store_true", help="also give the agent its bash tool (runs in the scratch dir but is NOT sandboxed)")
+    s.add_argument("--save", action="store_true", help="also write bench/results/<date>-evalrun-mimo.{jsonl,md}")
+    s.set_defaults(fn=cmd_run)
+    s = sub.add_parser("blind", help="anonymise runs into a review folder (A/B labels)")
+    s.add_argument("runs", nargs="+", help="work dirs made by `eval-task run`")
+    s.add_argument("--out", required=True)
+    s.add_argument("--seed", type=int)
+    s.set_defaults(fn=cmd_blind)
+    s = sub.add_parser("unblind", help="join <out>/scores.json with the key")
+    s.add_argument("out")
+    s.set_defaults(fn=cmd_unblind)
+    return p
+
+
+def main():
+    a = build_parser().parse_args()
+    a.fn(a)
+
+
+if __name__ == "__main__":
+    main()

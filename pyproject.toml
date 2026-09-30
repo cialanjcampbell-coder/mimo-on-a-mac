@@ -1,0 +1,51 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mimo-on-a-mac"
+version = "0.1.0"
+description = "Run MiMo-V2.6-Flash (309B MoE) on a 128 GB Apple silicon Mac by streaming experts from the SSD"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [
+    { name = "Cialan Campbell" }
+]
+keywords = [
+    "mlx",
+    "apple-silicon",
+    "moe",
+    "mixture-of-experts",
+    "ssd-streaming",
+    "direct-io",
+    "llm",
+    "mimo",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: MacOS X",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: MacOS",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    "numpy>=2.0",
+    "mlx==0.32.2",
+    "mlx-lm==0.31.3",
+]
+
+[project.urls]
+Repository = "https://github.com/cialanjcampbell-coder/mimo-on-a-mac"
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["agent*", "engine*", "scripts*"]
