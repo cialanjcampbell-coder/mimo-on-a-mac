@@ -154,9 +154,7 @@ class CliTest(WorkDir):
         time.sleep(1)
         p.send_signal(signal.SIGINT)
         time.sleep(0.3)
-        p.stdin.write("/reset\nagain\n")
-        p.stdin.close()
-        out = p.communicate(timeout=30)[0]
+        out = p.communicate("/reset\nagain\n", timeout=30)[0]
         self.assertEqual(p.returncode, 0, out)
         self.assertIn("[aborted]", out)
         self.assertIn("second answer", out)
