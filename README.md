@@ -18,7 +18,9 @@ A 160 GB model doesn't fit in 128 GB of memory. This repo runs one anyway, well 
 | Decode | 12–14 tok/s in real agent sessions |
 | Prefill | 380–500 tok/s; about 1 s to first token on cached follow-up turns |
 
-Informally, in daily use, it gave better answers than Qwen3.8-Flash-Next, a smaller model that fits entirely in memory, and ran cooler. That comparison is an impression, not a benchmark result.
+Informally, in daily use, it gave better answers with a lower thermal footprint than Qwen3.8-Flash-Next, a smaller model that fits entirely in memory. 
+
+* The agent will automatically run shell commands and edit files. Use in commited repos or a sandbox*
 
 ## How it was built
 
