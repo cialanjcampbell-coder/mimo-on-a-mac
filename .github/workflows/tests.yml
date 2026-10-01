@@ -1,0 +1,23 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Lint (pyflakes rules)
+        run: pipx run ruff check --select F .
+      # The model-dependent and MLX kernel tests skip here; they need the converted weights and Metal.
+      - name: Unit tests
+        run: |
+          python -m unittest discover -s engine/tests -v
+          python -m unittest discover -s scripts/tests -v
+          python -m unittest discover -s agent/tests -v
