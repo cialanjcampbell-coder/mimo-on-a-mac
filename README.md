@@ -1,6 +1,9 @@
 # MiMo on a Mac
 
 [![tests](https://github.com/cialanjcampbell-coder/mimo-on-a-mac/actions/workflows/tests.yml/badge.svg)](https://github.com/cialanjcampbell-coder/mimo-on-a-mac/actions/workflows/tests.yml)
+[![License](https://img.shields.io/github/license/cialanjcampbell-coder/mimo-on-a-mac)](LICENSE)
+![Platform](https://img.shields.io/badge/platform-Apple%20Silicon-171f2c?logo=apple&logoColor=white)
+
 
 **Running a 309B MoE model as a local coding agent on a 128 GB MacBook.**
 
