@@ -160,6 +160,31 @@ class CliTest(WorkDir):
         self.assertIn("second answer", out)
         self.assertEqual(srv.requests[1]["messages"][1:], [{"role": "user", "content": "again"}])
 
+    def test_interactive_commands_and_turn_stats(self):
+        srv = self.server(reply("an answer"))
+        p = subprocess.run([sys.executable, "-m", "agent", "--no-start", "--base-url", srv.base_url],
+                           input="/help\n/rest\nhi\n/exit\n", capture_output=True, text=True, timeout=30,
+                           env=dict(os.environ, PYTHONPATH=str(REPO)))
+        self.assertEqual(p.returncode, 0, p.stderr)
+        self.assertIn("/reset   clear the conversation", p.stdout)
+        self.assertIn("unknown command /rest", p.stdout)
+        self.assertIn("an answer", p.stdout)
+        self.assertIn("· 7 tokens out]", p.stdout)
+        self.assertEqual(len(srv.requests), 1)  # only "hi" reached the model
+
+    def test_server_start_failure_exits_fast(self):
+        # default base URL with nothing on it: mimo-server-ctl start must fail on the bad model dir, not hang
+        from agent.__main__ import DEFAULT_BASE, healthy
+        if healthy(DEFAULT_BASE):
+            self.skipTest("a server is running on the default port")
+        t0 = time.time()
+        p = subprocess.run([sys.executable, "-m", "agent", "-p", "hi"], capture_output=True, text=True, timeout=60,
+                           env=dict(os.environ, PYTHONPATH=str(REPO), MIMO_MODEL_DIR="/nonexistent/model"))
+        self.assertEqual(p.returncode, 1, p.stderr)
+        self.assertLess(time.time() - t0, 20)
+        self.assertIn("has no config.json", p.stderr)
+        self.assertIn("failed to start", p.stderr)
+
     def test_launcher_via_symlink(self):
         srv = self.server(reply("hello from launcher"))
         link = Path(self.tmp.name) / "bin" / "mimo-agent"

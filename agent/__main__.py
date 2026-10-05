@@ -13,6 +13,10 @@ from agent.loop import Agent
 DEFAULT_BASE = "http://127.0.0.1:8082/v1"
 REPO = Path(__file__).resolve().parent.parent
 TTY = sys.stdout.isatty()
+HELP = """/reset   clear the conversation
+/exit    quit (also /quit or Ctrl-D)
+/help    this list
+Ctrl-C   abort the current turn"""
 
 
 def style(code, s):
@@ -28,26 +32,25 @@ def healthy(base):
 
 
 def ensure_server(base):
-    """Start the local MiMo server (scripts/mimo-server-ctl start) if it's down and base is the default URL."""
+    """Start the local MiMo server (scripts/mimo-server-ctl start) if it's down and base is the default URL.
+    mimo-server-ctl itself waits for /health, so its exit status says whether the server came up."""
     if base.rstrip("/") != DEFAULT_BASE or healthy(base):
-        return
+        return True
     print("[mimo-agent] server not running; starting it with scripts/mimo-server-ctl start", file=sys.stderr)
+    t0 = time.time()
     try:
-        subprocess.run([str(REPO / "scripts" / "mimo-server-ctl"), "start"], stdin=subprocess.DEVNULL,
-                       stdout=sys.stderr, check=False)
+        rc = subprocess.run([str(REPO / "scripts" / "mimo-server-ctl"), "start"], stdin=subprocess.DEVNULL,
+                            stdout=sys.stderr, check=False).returncode
     except OSError as e:
         print(f"[mimo-agent] could not run mimo-server-ctl: {e}", file=sys.stderr)
-        return
-    t0 = last = time.time()
-    while time.time() - t0 < 300:
-        if healthy(base):
-            print(f"[mimo-agent] server up after {time.time() - t0:.0f}s", file=sys.stderr)
-            return
-        if time.time() - last >= 10:
-            print(f"[mimo-agent] waiting for server ({time.time() - t0:.0f}s)", file=sys.stderr)
-            last = time.time()
-        time.sleep(1)
-    print("[mimo-agent] server did not become healthy within 300s", file=sys.stderr)
+        return False
+    if rc == 0 and healthy(base):
+        print(f"[mimo-agent] server up after {time.time() - t0:.0f}s", file=sys.stderr)
+        return True
+    print("[mimo-agent] the MiMo server failed to start (see above). Check that MIMO_MODEL_DIR points at the "
+          "converted weights and MIMO_VENV at a venv with requirements.txt installed, or pass --no-start / "
+          "--base-url to use another server.", file=sys.stderr)
+    return False
 
 
 def call_line(name, args):
@@ -92,7 +95,7 @@ def interactive(a):
         import readline  # noqa: F401  (line editing + history for input())
     except ImportError:
         pass
-    state = {"kind": None}
+    state = {"kind": None, "out": 0}
 
     def on_delta(kind, text):
         if state["kind"] and state["kind"] != kind:
@@ -113,12 +116,14 @@ def interactive(a):
             lines = text.splitlines() or [""]
             summary = lines[0][:100] + (f"  (+{len(lines) - 1} lines)" if len(lines) > 1 else "")
             print(style("31" if m["isError"] else "2", f"  {summary}"), flush=True)
-        elif m["role"] == "assistant" and m["stopReason"] in ("error", "aborted", "length"):
-            print(style("31", f"\n[{m['stopReason']}{': ' + m['errorMessage'] if m.get('errorMessage') else ''}]"))
+        elif m["role"] == "assistant":
+            state["out"] += m["usage"]["output"]
+            if m["stopReason"] in ("error", "aborted", "length"):
+                print(style("31", f"\n[{m['stopReason']}{': ' + m['errorMessage'] if m.get('errorMessage') else ''}]"))
 
     agent = Agent(a.base_url, a.model, a.tools, a.thinking == "on", a.max_turns, emit=emit, on_delta=on_delta,
                   on_tool_start=on_tool)
-    print(style("2", f"mimo-agent · {a.model} · {os.getcwd()} · /reset, /exit, Ctrl-C aborts a turn"))
+    print(style("2", f"mimo-agent · {a.model} · {os.getcwd()} · /help for commands, Ctrl-C aborts a turn"))
     while True:
         try:
             line = input(style("1", "> ") if TTY else "> ").strip()
@@ -133,12 +138,20 @@ def interactive(a):
             agent.reset()
             print(style("2", "[conversation cleared]"))
             continue
-        state["kind"] = None
+        if line == "/help":
+            print(style("2", HELP))
+            continue
+        if re.fullmatch(r"/\w+", line):
+            print(style("31", f"unknown command {line} (/help lists them)"))
+            continue
+        state["kind"], state["out"] = None, 0
+        t0 = time.time()
         try:
             agent.run(line)
         except KeyboardInterrupt:
             print(style("31", "\n[aborted]"))
         print("\n" if state["kind"] else "", end="")
+        print(style("2", f"[{time.time() - t0:.1f}s · {state['out']} tokens out]"))
 
 
 def main(argv=None):
@@ -157,8 +170,8 @@ def main(argv=None):
     if bad:
         ap.error(f"unknown tool(s): {', '.join(bad)} (choose from {', '.join(tools.ALL)})")
     signal.signal(signal.SIGTERM, lambda *_: sys.exit(143))  # so a running bash tool's process group is killed
-    if not a.no_start:
-        ensure_server(a.base_url)
+    if not a.no_start and not ensure_server(a.base_url):
+        return 1
     return headless(a) if a.prompt is not None else interactive(a)
 
 

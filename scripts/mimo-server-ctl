@@ -46,6 +46,12 @@ conflicts() {
 start() {
   healthy && { print -u2 "MiMo server already up on :$port"; return 0 }
   [[ -n ${MIMO_MODEL_DIR:-} ]] || { print -u2 "Set MIMO_MODEL_DIR to the converted model directory."; return 1 }
+  [[ -f $MIMO_MODEL_DIR/config.json ]] || {
+    print -u2 "MIMO_MODEL_DIR=$MIMO_MODEL_DIR has no config.json; point it at the converted model directory."
+    return 1 }
+  $py -c 'import mlx.core, mlx_lm, numpy' 2>/dev/null || {
+    print -u2 "$py can't import mlx/mlx_lm/numpy; set MIMO_VENV (or PYTHON) to an environment with requirements.txt installed."
+    return 1 }
   if lsof -nP -iTCP:$port -sTCP:LISTEN >/dev/null 2>&1; then
     print -u2 "Something else is listening on :$port"; return 1
   fi

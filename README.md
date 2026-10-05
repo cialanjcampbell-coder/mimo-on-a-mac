@@ -112,10 +112,12 @@ scripts/mimo-server-ctl status
 ### 3. Run the coding agent
 `scripts/mimo-agent` is a lightweight coding agent (stdlib-only Python, code in `agent/`) with tools `read`, `edit`, `write`, `grep`, `find`, `ls`, `bash`.
 
-Interactive REPL (`/reset` clears the conversation, `/exit` quits, Ctrl-C interrupts a turn):
+Interactive REPL (`/reset` clears the conversation, `/exit` quits, `/help` lists commands, Ctrl-C interrupts a turn):
 ```bash
 scripts/mimo-agent
 ```
+![A mimo-agent REPL session: /help, exploring a small word-count script, adding a --top N option, then making counting case-insensitive in a follow-up turn (model output sped up 4x)](docs/repl.gif)
+
 Headless, one prompt then exit (`--json` for machine-readable output):
 ```bash
 scripts/mimo-agent -p "fix the failing test in tests/test_foo.py" [--json]
