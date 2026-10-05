@@ -83,7 +83,7 @@ Several issues hit here were also found independently by others: the MiMo fused-
 - `evals/`: 6 coding-agent tasks with hidden checks, run by `scripts/eval-task` ([details](evals/README.md))
 - `bench/`: benchmark reports and raw machine-readable results
 
-## Running it
+## How to run it yourself
 
 ### Prerequisites
 - Apple silicon Mac with 128 GB of unified memory (tested only on an M5 Max).
@@ -116,7 +116,9 @@ Interactive REPL (`/reset` clears the conversation, `/exit` quits, `/help` lists
 ```bash
 scripts/mimo-agent
 ```
-![A mimo-agent REPL session: /help, exploring a small word-count script, adding a --top N option, then making counting case-insensitive in a follow-up turn (model output sped up 4x)](docs/repl.gif)
+![A mimo-agent REPL session: /help, exploring a small word-count script, adding a --top N option, then making counting case-insensitive in a follow-up turn](docs/repl.gif)
+
+*Real time: model output and pauses are shown at the speed they ran on an M5 Max.*
 
 Headless, one prompt then exit (`--json` for machine-readable output):
 ```bash
