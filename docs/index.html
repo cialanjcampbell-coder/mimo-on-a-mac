@@ -97,7 +97,6 @@
       <ul>
         <li><a href="#idea">The idea</a></li>
         <li><a href="#why">Why it matters</a></li>
-        <li><a href="#demo">See it working</a></li>
         <li><a href="#numbers">Key numbers</a></li>
         <li><a href="#how">How it was built</a></li>
         <li><a href="#learned">What was learned</a></li>
@@ -129,32 +128,6 @@
       <li><strong>Nothing cut down.</strong> The model runs at the precision it was released at. It isn't shrunk or simplified to make it fit.</li>
       <li><strong>"Too big to fit" isn't a hard limit.</strong> Careful engineering can stretch what ordinary hardware can do.</li>
     </ul>
-  </section>
-
-  <section aria-labelledby="demo">
-    <h2 id="demo">See it working</h2>
-    <p>In this recording, the AI is given a small accounting program with a bug: expenses on the last day of each month go missing from the monthly totals. It works on the problem by itself, with no human help.</p>
-    <figure>
-      <img id="demo-img" src="demo-poster.png" width="983" height="739"
-           alt="Final screen of the demo. The AI has read the project files, edited the date code and the tests, explained the bug and its fix, and an automatic checker reports PASS, 8 of 8 checks.">
-      <figcaption>
-        Recorded on a MacBook Pro with an M5 Max chip. Pauses are shortened; the full run took about 2 minutes.
-        <br><button type="button" id="demo-toggle" hidden>Play the animation</button>
-        <noscript><a href="demo.gif">Open the animated recording (GIF, 400 KB)</a></noscript>
-      </figcaption>
-    </figure>
-    <details>
-      <summary>Text description of the recording</summary>
-      <ol>
-        <li>The AI is given the task: totals for the month are wrong, find and fix the bug.</li>
-        <li>It reads the program's files one by one: the date code, the ledger, the report and the existing tests.</li>
-        <li>It finds the cause. A function meant to include both the start and end dates was skipping the end date, so the last day of every month (31 January, 28 February, 30 April and so on) was dropped.</li>
-        <li>It makes a one-line fix and adds a new test to make sure 31 January is counted in January.</li>
-        <li>It writes a short explanation of the cause and the fix.</li>
-        <li>A separate checker that the AI never saw runs 8 hidden checks. All 8 pass.</li>
-        <li>The status screen shows the model writing about 11 tokens a second, with 90.5% of the experts it needed already in memory.</li>
-      </ol>
-    </details>
   </section>
 
   <section aria-labelledby="numbers">
@@ -252,24 +225,5 @@
   </div>
 </footer>
 
-<script>
-  (function () {
-    var img = document.getElementById("demo-img");
-    var btn = document.getElementById("demo-toggle");
-    var still = { src: "demo-poster.png", alt: img.alt };
-    var anim = {
-      src: "demo.gif",
-      alt: "Animated recording of the AI reading the project files, fixing the month-end bug, adding a test, and the checker reporting PASS, 8 of 8 checks."
-    };
-    btn.hidden = false;
-    btn.addEventListener("click", function () {
-      var playing = img.getAttribute("src") === anim.src;
-      var next = playing ? still : anim;
-      img.src = next.src;
-      img.alt = next.alt;
-      btn.textContent = playing ? "Play the animation" : "Stop the animation";
-    });
-  })();
-</script>
 </body>
 </html>
