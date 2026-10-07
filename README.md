@@ -23,7 +23,8 @@ A 160 GB model doesn't fit in 128 GB of memory. This repo runs one anyway, well 
 
 Informally, in daily use, it gave better answers with a lower thermal footprint than Qwen3.8-Flash-Next, a smaller model that fits entirely in memory. 
 
-* The agent will automatically run shell commands and edit files. Use in commited repos or a sandbox*
+> [!WARNING]
+> **Security Notice:The agent automatically executes shell commands and edits files. Only run in committed repos or a sandboxed environment.**
 
 ## How it was built
 
