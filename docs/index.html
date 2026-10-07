@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MiMo on a Mac: a 160 GB AI model running on a 128 GB laptop</title>
+<meta name="description" content="A plain-language overview of a project that runs a very large open AI coding model on a single MacBook by streaming parts of it from the SSD.">
+<meta name="color-scheme" content="light dark">
+<style>
+  :root {
+    --bg: #fdfdfb;
+    --text: #1b1f24;
+    --muted: #4a5260;
+    --link: #0b57d0;
+    --panel: #f1f3f5;
+    --border: #c9ced6;
+    --focus: #b3261e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #15181d;
+      --text: #e8eaed;
+      --muted: #b4bac4;
+      --link: #8ab4f8;
+      --panel: #1f242b;
+      --border: #3c434d;
+      --focus: #ffb4ab;
+    }
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  html { font-size: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 1.125rem;
+    line-height: 1.6;
+  }
+  .wrap { max-width: 44rem; margin: 0 auto; padding: 0 1.25rem; }
+  a { color: var(--link); text-underline-offset: 0.15em; }
+  a:focus-visible, button:focus-visible, summary:focus-visible {
+    outline: 3px solid var(--focus);
+    outline-offset: 3px;
+    border-radius: 2px;
+  }
+  .skip {
+    position: absolute; left: 0.5rem; top: -4rem;
+    background: var(--text); color: var(--bg);
+    padding: 0.5rem 1rem; z-index: 10;
+  }
+  .skip:focus { top: 0.5rem; }
+  header { padding: 3rem 0 1.5rem; border-bottom: 1px solid var(--border); }
+  h1 { font-size: 2.25rem; line-height: 1.2; margin: 0 0 0.75rem; }
+  h2 { font-size: 1.6rem; line-height: 1.3; margin: 2.75rem 0 0.75rem; }
+  h3 { font-size: 1.2rem; margin: 1.5rem 0 0.25rem; }
+  .lede { font-size: 1.3rem; color: var(--muted); margin: 0; }
+  nav ul { list-style: none; padding: 0; margin: 1.25rem 0 0; display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; }
+  .callout {
+    background: var(--panel); border-left: 4px solid var(--link);
+    padding: 1rem 1.25rem; margin: 1.5rem 0;
+  }
+  figure { margin: 1.5rem 0; }
+  figure img { display: block; width: 100%; height: auto; border: 1px solid var(--border); }
+  figcaption { color: var(--muted); font-size: 1rem; margin-top: 0.5rem; }
+  button {
+    font: inherit; font-size: 1rem; cursor: pointer;
+    margin-top: 0.75rem; padding: 0.5rem 1rem;
+    color: var(--text); background: var(--panel);
+    border: 2px solid var(--border); border-radius: 6px;
+  }
+  table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+  th, td { text-align: left; vertical-align: top; padding: 0.6rem 0.5rem; border-bottom: 1px solid var(--border); }
+  thead th { border-bottom-width: 2px; }
+  tbody th { white-space: nowrap; }
+  details { background: var(--panel); border: 1px solid var(--border); border-radius: 6px; padding: 0.5rem 1rem; margin: 0.75rem 0; }
+  summary { cursor: pointer; font-weight: 600; padding: 0.25rem 0; }
+  dt { font-weight: 600; margin-top: 0.75rem; }
+  dd { margin: 0 0 0 1rem; }
+  ol li, ul li { margin-bottom: 0.4rem; }
+  .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  footer { margin-top: 3.5rem; padding: 1.5rem 0 3rem; border-top: 1px solid var(--border); color: var(--muted); font-size: 1rem; }
+  @media (max-width: 30rem) {
+    h1 { font-size: 1.75rem; }
+    tbody th { white-space: normal; }
+  }
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to main content</a>
+
+<header>
+  <div class="wrap">
+    <h1>MiMo on a Mac</h1>
+    <p class="lede">A 160 GB AI model running on a laptop with only 128 GB of memory, well enough to use every day as a coding assistant.</p>
+    <nav aria-label="On this page">
+      <ul>
+        <li><a href="#idea">The idea</a></li>
+        <li><a href="#why">Why it matters</a></li>
+        <li><a href="#demo">See it working</a></li>
+        <li><a href="#numbers">Key numbers</a></li>
+        <li><a href="#how">How it was built</a></li>
+        <li><a href="#learned">What was learned</a></li>
+        <li><a href="#limits">Limitations</a></li>
+        <li><a href="#glossary">Glossary</a></li>
+        <li><a href="#more">Try it</a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<main id="main" class="wrap">
+
+  <section aria-labelledby="idea">
+    <h2 id="idea">The idea in plain words</h2>
+    <p>The most capable AI models are usually run on large, expensive servers in data centres. This project runs one of them, Xiaomi's <strong>MiMo-V2.6-Flash</strong>, on a single MacBook Pro.</p>
+    <p>The catch is that the model is bigger than the laptop's memory. The model is split into many small specialist parts called "experts", and only a few of them are needed for each word it writes. So the project keeps the most-used experts in memory and fetches the rest from the laptop's fast storage drive (the <abbr title="solid-state drive">SSD</abbr>) only when they are needed.</p>
+    <div class="callout">
+      <p><strong>An analogy:</strong> think of a library that keeps its most popular books on the front desk and sends someone to the stacks for the rest. If the front desk is chosen well, most requests are answered instantly. Here, about 9 out of 10 requests are.</p>
+    </div>
+  </section>
+
+  <section aria-labelledby="why">
+    <h2 id="why">Why it matters</h2>
+    <ul>
+      <li><strong>Privacy.</strong> Your code and questions never leave your computer.</li>
+      <li><strong>No ongoing costs.</strong> No subscription or pay-per-use cloud bill.</li>
+      <li><strong>Works offline.</strong> No internet connection needed once it is set up.</li>
+      <li><strong>Nothing cut down.</strong> The model runs at the precision it was released at. It isn't shrunk or simplified to make it fit.</li>
+      <li><strong>"Too big to fit" isn't a hard limit.</strong> Careful engineering can stretch what ordinary hardware can do.</li>
+    </ul>
+  </section>
+
+  <section aria-labelledby="demo">
+    <h2 id="demo">See it working</h2>
+    <p>In this recording, the AI is given a small accounting program with a bug: expenses on the last day of each month go missing from the monthly totals. It works on the problem by itself, with no human help.</p>
+    <figure>
+      <img id="demo-img" src="demo-poster.png" width="983" height="739"
+           alt="Final screen of the demo. The AI has read the project files, edited the date code and the tests, explained the bug and its fix, and an automatic checker reports PASS, 8 of 8 checks.">
+      <figcaption>
+        Recorded on a MacBook Pro with an M5 Max chip. Pauses are shortened; the full run took about 2 minutes.
+        <br><button type="button" id="demo-toggle" hidden>Play the animation</button>
+        <noscript><a href="demo.gif">Open the animated recording (GIF, 400 KB)</a></noscript>
+      </figcaption>
+    </figure>
+    <details>
+      <summary>Text description of the recording</summary>
+      <ol>
+        <li>The AI is given the task: totals for the month are wrong, find and fix the bug.</li>
+        <li>It reads the program's files one by one: the date code, the ledger, the report and the existing tests.</li>
+        <li>It finds the cause. A function meant to include both the start and end dates was skipping the end date, so the last day of every month (31 January, 28 February, 30 April and so on) was dropped.</li>
+        <li>It makes a one-line fix and adds a new test to make sure 31 January is counted in January.</li>
+        <li>It writes a short explanation of the cause and the fix.</li>
+        <li>A separate checker that the AI never saw runs 8 hidden checks. All 8 pass.</li>
+        <li>The status screen shows the model writing about 11 tokens a second, with 90.5% of the experts it needed already in memory.</li>
+      </ol>
+    </details>
+  </section>
+
+  <section aria-labelledby="numbers">
+    <h2 id="numbers">Key numbers, translated</h2>
+    <table>
+      <caption class="visually-hidden">Key numbers about the project with plain-language meanings</caption>
+      <thead>
+        <tr><th scope="col">Measure</th><th scope="col">Value</th><th scope="col">What it means</th></tr>
+      </thead>
+      <tbody>
+        <tr><th scope="row">Model size</th><td>309 billion parameters, about 160 GB</td><td>A very large open model, bigger than the laptop's 128 GB of memory.</td></tr>
+        <tr><th scope="row">Used per word</th><td>15 billion parameters</td><td>Only about 5% of the model is needed for each word, which is what makes streaming possible.</td></tr>
+        <tr><th scope="row">Kept in memory</th><td>125 of 256 experts per layer</td><td>About half the experts stay in memory (about 92 GB); the rest are read from the SSD when needed.</td></tr>
+        <tr><th scope="row">Writing speed</th><td>12–14 tokens a second</td><td>Roughly 9–10 words a second, faster than most people read.</td></tr>
+        <tr><th scope="row">Reply start</th><td>About 1 second</td><td>On follow-up messages in a conversation, the first word appears almost immediately.</td></tr>
+        <tr><th scope="row">Quality</th><td>Matches a reference version</td><td>Its accuracy on unseen code matches a slow, careful reference run of the same model, so nothing was lost.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section aria-labelledby="how">
+    <h2 id="how">How it was built</h2>
+    <p>Each step was measured before the next one was started.</p>
+    <ol>
+      <li><strong>Measure the hardware.</strong> Test how fast the laptop's chip and storage drive really are. One finding: the usual way of reading files left about 90% of the drive's speed unused, so a faster method was needed.</li>
+      <li><strong>Do the arithmetic.</strong> Work out which models could realistically run, from how much data each word needs and how fast it can be read. MiMo was the only strong candidate that could run without being shrunk.</li>
+      <li><strong>Convert the model carefully.</strong> Rearrange the model's files so the drive can read them quickly, and check that the converted copy is identical to the original.</li>
+      <li><strong>Simulate before building.</strong> Record which experts were used in 52 real coding sessions, then test different "front desk" strategies on that data. Building only started once a strategy kept over 90% of requests in memory.</li>
+      <li><strong>Build it and use it.</strong> Write the engine that runs the model, a server that other programs can talk to, and a small coding assistant. Then use it every day and keep improving it, from about 8.7 to over 14 tokens a second.</li>
+    </ol>
+  </section>
+
+  <section aria-labelledby="learned">
+    <h2 id="learned">What was learned</h2>
+    <ul>
+      <li><strong>There is no fixed set of "popular" experts.</strong> Which experts are busy depends on the project you are working on, so the memory has to adapt as you work rather than be chosen once.</li>
+      <li><strong>A common speed-up trick doesn't help here.</strong> "Speculative decoding" guesses several words ahead and checks them together. Normally that saves time, but here every guess needs its own experts fetched from the drive, so the savings disappear.</li>
+      <li><strong>Tiny differences add up.</strong> Two correct versions of the model can pick different words about 10% of the time because of tiny rounding differences. So versions have to be compared on overall accuracy, not word by word.</li>
+      <li><strong>Dead ends are written down too,</strong> so nobody else has to repeat them.</li>
+    </ul>
+  </section>
+
+  <section aria-labelledby="limits">
+    <h2 id="limits">Limitations</h2>
+    <ul>
+      <li>It needs an Apple Silicon Mac with 128 GB of memory and about 170 GB of free SSD space.</li>
+      <li>It has only been tested on one machine (a MacBook Pro with an M5 Max).</li>
+      <li>It remembers one conversation at a time.</li>
+      <li><strong>The coding assistant runs commands and edits files by itself.</strong> Only use it on projects that are backed up, or in a separate test environment.</li>
+    </ul>
+  </section>
+
+  <section aria-labelledby="glossary">
+    <h2 id="glossary">Glossary</h2>
+    <details>
+      <summary>Show definitions of the technical terms</summary>
+      <dl>
+        <dt>AI model</dt>
+        <dd>A program that has learned patterns from large amounts of text, and can write text, answer questions and write code.</dd>
+        <dt>Parameters</dt>
+        <dd>The numbers a model has learned. More parameters usually means a more capable, but bigger, model.</dd>
+        <dt>Memory (<abbr title="random-access memory">RAM</abbr>)</dt>
+        <dd>The computer's fast working space. Everything the chip works on has to be here.</dd>
+        <dt><abbr title="solid-state drive">SSD</abbr></dt>
+        <dd>The computer's storage drive, where files are kept. Much larger than memory, but slower to read from.</dd>
+        <dt>Token</dt>
+        <dd>A piece of a word. AI models read and write text a token at a time; one English word is about 1.3 tokens on average.</dd>
+        <dt>Experts (Mixture of Experts)</dt>
+        <dd>A model design where the model is split into many specialist parts, and only a few are used for each token. MiMo has 256 experts in each layer and uses 8 at a time.</dd>
+        <dt>Coding agent</dt>
+        <dd>An AI assistant that can read, edit and test code by itself, rather than only suggesting changes.</dd>
+        <dt>GitHub</dt>
+        <dd>A website where people publish and share code. This project's code, measurements and full technical write-up live there.</dd>
+      </dl>
+    </details>
+  </section>
+
+  <section aria-labelledby="more">
+    <h2 id="more">Want to try it or read more?</h2>
+    <p>All of the code, the measurements behind every number on this page, and setup instructions are free to use and published on GitHub. You don't need a GitHub account to read them.</p>
+    <ul>
+      <li><a href="https://github.com/cialanjcampbell-coder/mimo-on-a-mac">View the project on GitHub</a> (technical README with setup instructions)</li>
+      <li><a href="https://github.com/cialanjcampbell-coder/mimo-on-a-mac/blob/main/bench/README.md">Read the benchmark reports and raw measurements</a></li>
+      <li><a href="https://github.com/cialanjcampbell-coder/mimo-on-a-mac/blob/main/evals/README.md">See the coding tasks used to test the assistant</a></li>
+      <li><a href="https://huggingface.co/XiaomiMiMo">Read about the MiMo models from Xiaomi</a> (on Hugging Face)</li>
+    </ul>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>Built by Cialan Campbell. Code released under the <a href="https://github.com/cialanjcampbell-coder/mimo-on-a-mac/blob/main/LICENSE">MIT License</a>. Model weights are not included and are under Xiaomi's license.</p>
+    <p>This work builds on others, including Apple's "LLM in a flash" research, mlx-serve, mlx-lm and other open projects on streaming AI models from storage. The <a href="https://github.com/cialanjcampbell-coder/mimo-on-a-mac#related-work">related work section of the README</a> lists them.</p>
+  </div>
+</footer>
+
+<script>
+  (function () {
+    var img = document.getElementById("demo-img");
+    var btn = document.getElementById("demo-toggle");
+    var still = { src: "demo-poster.png", alt: img.alt };
+    var anim = {
+      src: "demo.gif",
+      alt: "Animated recording of the AI reading the project files, fixing the month-end bug, adding a test, and the checker reporting PASS, 8 of 8 checks."
+    };
+    btn.hidden = false;
+    btn.addEventListener("click", function () {
+      var playing = img.getAttribute("src") === anim.src;
+      var next = playing ? still : anim;
+      img.src = next.src;
+      img.alt = next.alt;
+      btn.textContent = playing ? "Play the animation" : "Stop the animation";
+    });
+  })();
+</script>
+</body>
+</html>
